@@ -12,6 +12,7 @@
     padding-left: 8px;
     display: table-cell;
     vertical-align: middle;
+    font-weight: bold;
 }
 
 .with-margins {
