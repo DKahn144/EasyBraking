@@ -13,4 +13,6 @@ The purpose of this app is to help drivers learn to control their braking rate. 
 
 So the EasyBraking app will help users to become safer drivers and save money on their auto insurance too!
 
+At this time, only the Android version of this app is working, if built as an APK file. The Iphone version 
+is planned.
 
