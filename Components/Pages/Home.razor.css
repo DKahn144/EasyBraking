@@ -1,0 +1,42 @@
+﻿body {
+}
+
+.grid {
+    display: grid;
+}
+
+.label {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    padding-right: 3px;
+    padding-left: 8px;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.with-margins {
+    margin: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(86, 61, 124, .8);
+}
+.large-label {
+    font-size: xx-large;
+    display: table-cell;
+    vertical-align: middle;
+    font-weight: bold;
+    text-align: center;
+}
+
+.blinking {
+    animation: blinker 0.5s step-start infinite;
+}
+
+@keyframes blinker {
+    20% {
+        opacity: 0;
+    }
+}
+
+.danger-white {
+    color: white;
+}

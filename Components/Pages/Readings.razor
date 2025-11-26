@@ -1,0 +1,158 @@
+﻿@page "/readings"
+
+<h3>  Sensor Data: </h3>
+<table class="table">
+    <tbody>
+        <tr>
+            <td>Direction</td>
+            <td>@model.AngleOfTravel</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Speed</td>
+            <td>@model.Location.Speed</td>
+            <td>@model.SpeedLabel</td>
+        </tr>
+        <tr>
+            <td>Accel Rate</td>
+            <td>@Math.Round(model.HorizAccel, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Latitude</td>
+            <td>@Math.Round(model.Location.Latitude, 5)</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Longitude</td>
+            <td>@Math.Round(model.Location.Longitude,5)</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Altitude</td>
+            <td>@model.Location.Altitude</td>
+            <td>meters</td>
+        </tr>
+        <tr>
+            <td>Location Buffer</td>
+            <td>@model.LocationPoints</td>
+            <td>readings</td>
+        </tr>
+        <tr>
+            <td>Orientation.X</td>
+            <td>@Math.Round(model.Orientation_X, 6)</td>
+            <td>units</td>
+        </tr>
+        <tr>
+            <td>Orientation.Y</td>
+            <td>@Math.Round(model.Orientation_Y, 6)</td>
+            <td>units</td>
+        </tr>
+        <tr>
+            <td>Orientation.Z</td>
+            <td>@Math.Round(model.Orientation_Z, 6)</td>
+            <td>units</td>
+        </tr>
+        <tr>
+            <td>Orientation.W</td>
+            <td>@Math.Round(model.Orientation_W, 6)</td>
+            <td>units</td>
+        </tr>
+        <tr>
+            <td>Orientation Buffer</td>
+            <td>@model.OrientationPoints</td>
+            <td>readings</td>
+        </tr>
+        <tr>
+            <td>Roll</td>
+            <td>@Math.Round(model.Orientation_Roll, 5)</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Pitch</td>
+            <td>@Math.Round(model.Orientation_Pitch, 5)</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Yaw</td>
+            <td>@Math.Round(model.Orientation_Yaw, 5)</td>
+            <td>degrees</td>
+        </tr>
+        <tr>
+            <td>Acceleration.X</td>
+            <td>@Math.Round(model.Acceleration_X, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Acceleration.Y</td>
+            <td>@Math.Round(model.Acceleration_Y, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Acceleration.Z</td>
+            <td>@Math.Round(model.Acceleration_Z, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Acceleration Buffer</td>
+            <td>@model.AccelerationPoints</td>
+            <td>readings</td>
+        </tr>
+        <tr>
+            <td>Abs.Accel.X</td>
+            <td>@Math.Round(model.AbsAcceleration_X, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Abs. Accel.Y</td>
+            <td>@Math.Round(model.AbsAcceleration_Y, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
+            <td>Abs. Accel.Z</td>
+            <td>@Math.Round(model.AbsAcceleration_Z, 5)</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+    </tbody>
+</table>
+
+<p role="status">Current braking: @horizontalAccel</p>
+
+@code {
+
+    public double horizontalAccel;
+    public double Speed;
+
+    private SensorManagerModel mgr;
+    private SensorValuesModel model;
+
+    public Readings()
+    {
+        try
+        {
+            mgr = SensorManagerModel.GetSensorManagerModel();
+            model = new SensorValuesModel(mgr);
+            mgr.ReadingChanged += this.UpdateValues;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        mgr.TriggerRecalc();
+    }
+
+    public void UpdateValues(object? sender, ReadingsChangedEventArgs args)
+    {
+        model = args.Data;
+        this.StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        mgr.ReadingChanged -= this.UpdateValues;
+    }
+}

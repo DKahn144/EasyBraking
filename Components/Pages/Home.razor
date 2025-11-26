@@ -1,0 +1,56 @@
+﻿@page "/"
+
+<div>
+    <div class="row">
+        <div class="col-5 label">Accel/Braking</div>
+        <div class="col-6 large-label with-margins @(brakeRateClass)" >
+            @model.AccelFromLocations @model.AccelLabel
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-5 label">Speed</div>
+        <div class="col-6 large-label with-margins">@model.Speed @model.SpeedLabel</div>
+    </div>
+</div>
+
+@code {
+
+    private SensorManagerModel mgr;
+    private SensorValuesModel model;
+    private string brakeRateClass = "bg-info";
+
+    public Home()
+    {
+        try
+        {
+            mgr = SensorManagerModel.GetSensorManagerModel();
+            model = new SensorValuesModel(mgr);
+            mgr.ReadingChanged += this.UpdateValues;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    protected override void OnInitialized() 
+    {
+        mgr.TriggerRecalc();
+    }
+
+    public void UpdateValues(object? sender, ReadingsChangedEventArgs args)
+    {
+        model = args.Data;
+        this.StateHasChanged();
+        brakeRateClass = 
+            (Math.Abs(model.HorizAccel) > model.AccelBrakeLimit) ? 
+            "blinking bg-danger danger-white" :
+            "bg-info";
+    }
+
+    public void Dispose()
+    {
+        mgr.ReadingChanged -= this.UpdateValues;
+    }
+
+}
