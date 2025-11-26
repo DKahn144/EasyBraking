@@ -1,5 +1,7 @@
 # EasyBraking
 
+![EASY Braking App](https://github.com/DKahn144/EasyBraking/easybrakingapp.png)
+
 The Easy Braking mobile app displays the vehicle's braking rate or acceleration rate on the phone.
 
 When the braking rate goes higher than a certain value, the displayed braking rate value flashes.  
