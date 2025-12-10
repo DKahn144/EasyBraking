@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36623.8 d17.14
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyBraking", "EasyBraking.csproj", "{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiSensorFeeds", ".\SensorFeeds\MauiSensorFeeds.csproj", "{59BB936F-774A-4981-7A04-080E3201BABF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,8 +15,14 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FE97914-4FB0-44B1-B090-0E05BEAB1A52}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{59BB936F-774A-4981-7A04-080E3201BABF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59BB936F-774A-4981-7A04-080E3201BABF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59BB936F-774A-4981-7A04-080E3201BABF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59BB936F-774A-4981-7A04-080E3201BABF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

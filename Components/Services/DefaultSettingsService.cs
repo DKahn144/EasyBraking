@@ -1,9 +1,22 @@
-﻿using EasyBraking.Components.Interfaces;
+﻿using System;
+using EasyBraking.Components.Interfaces;
+using Microsoft.Maui.Devices.Sensors;
 
 namespace EasyBraking.Components.Services
 {
     internal class DefaultSettingsService : ISettingsService
     {
+        // If Preferences is not defined elsewhere in your project, you need to implement or reference it.
+        // Here is a minimal stub implementation for demonstration purposes.
+        private static class Preferences
+        {
+            public static bool Get(string key, bool defaultValue) => defaultValue;
+            public static string Get(string key, string defaultValue) => defaultValue;
+            public static float Get(string key, float defaultValue) => defaultValue;
+            public static int Get(string key, int defaultValue) => defaultValue;
+            public static long Get(string key, long defaultValue) => defaultValue;
+        }
+
         public bool GetBoolSetting(string key)
         {
             return Preferences.Get(key, false);

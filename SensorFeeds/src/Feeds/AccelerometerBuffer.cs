@@ -1,4 +1,10 @@
-﻿namespace EasyBraking.Components.Models
+﻿using MauiSensorFeeds.BaseModels;
+using MauiSensorFeeds.Interfaces;
+using Microsoft.Maui.Devices.Sensors;
+using System;
+using System.Numerics;
+
+namespace MauiSensorFeeds.Feeds
 {
     /*
      * From:  https://learn.microsoft.com/en-us/dotnet/maui/platform-integration/device/sensors?view=net-maui-9.0&tabs=android
@@ -29,49 +35,34 @@
      * or, A-(-G), which corresponds to the acceleration of the device 
      * minus the (negative) force of gravity and normalized in G.
      */
-    internal class AccelerationModel : Vector3Model
+
+    public partial class AccelerometerBuffer : AccelerometerSensor
     {
-        public AccelerationModel(SensorManagerModel model, int maxSamplecount) : base(model, maxSamplecount)
+        private SensorBuffer<Vector3> sensorBuffer;
+
+        public AccelerometerBuffer(BufferingStrategy strategy = BufferingStrategy.AverageOfLast10Milliseconds)
+            : base()
         {
-            if (model == null)
-                throw new ArgumentNullException("SensorViewModel model");
-            if (model.AccelerometerSensor == null)
-                throw new ArgumentNullException("model.AccelerometerSensor");
+            this.sensorBuffer = new Vector3Buffer(this, strategy);
         }
 
-        public override void Configure()
+        public SensorBuffer<Vector3> SensorBuffer => sensorBuffer;
+
+        protected override Vector3 CustomHandler(Vector3 value)
         {
-            this.isSupported = sensorManagerModel.AccelerometerSensor.IsSupported;
-            if (this.isSupported && !sensorManagerModel.AccelerometerSensor.IsMonitoring)
-            {
-                sensorManagerModel.AccelerometerSensor.ReadingChanged += Accelerometer_ReadingChanged;
-                sensorManagerModel.AccelerometerSensor.Start(SensorSpeed.UI);
-            }
+            return this.sensorBuffer.CustomHandler(value);
         }
 
         public override void Dispose()
         {
-            if (sensorManagerModel.AccelerometerSensor.IsMonitoring)
+            if (this.IsMonitoring)
             {
-                sensorManagerModel.AccelerometerSensor.Stop();
-                sensorManagerModel.AccelerometerSensor.ReadingChanged -= Accelerometer_ReadingChanged;
+                this.Stop();
+                DetachEventListeners();
             }
+            this.sensorBuffer.Dispose();
             base.Dispose();
         }
 
-        public double HorizontalAccel
-        {
-            get
-            {
-                // remove gravity vector
-                var lsq = this.CurrentAvgValue.LengthSquared();
-                return lsq > 1 ? lsq - 1 : 0;
-            }
-        }
-
-        private void Accelerometer_ReadingChanged(object? sender, AccelerometerChangedEventArgs e)
-        {
-            this.RecordReading(e.Reading.Acceleration);
-        }
     }
 }

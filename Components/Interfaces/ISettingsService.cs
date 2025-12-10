@@ -1,4 +1,6 @@
-﻿namespace EasyBraking.Components.Interfaces
+﻿using Microsoft.Maui.Devices.Sensors;
+
+namespace EasyBraking.Components.Interfaces
 {
     /// <summary>
     /// Injectible settings service.

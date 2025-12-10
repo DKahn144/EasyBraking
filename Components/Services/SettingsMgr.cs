@@ -2,7 +2,7 @@
 
 namespace EasyBraking.Components.Services
 {
-    internal static class SettingsMgr
+    public static class SettingsMgr
     {
         static ISettingsService CurrentService = new DefaultSettingsService();
 

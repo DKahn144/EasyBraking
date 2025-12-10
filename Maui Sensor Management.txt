@@ -1,0 +1,51 @@
+Maui Sensor Management
+
+The nuget package for managing Maui sensors shall make it easy to:
+
+1. Specify a test sensor feed for any MAUI app.
+
+2. Control the sensor signal feed with buffering with multiple options.
+
+3. Log the sensor data to a file for replaying later.
+
+The user must pass the sensor source object to his app.  The sensor source can be 
+created with parameters that tell it how to behave.
+
+These parameters are:
+	1. What to take as the source: test data or real readings
+	2. Whether and how to buffer the readings.
+	3. Whether to write the readings out to a file.
+
+It should also be not difficult to override this behavior with their own code.
+
+
+An additional feature is that the project will provide the values for absolute acceleration relative to the earth and the direction of travel.
+
+Because of combines sensor calculations, a data object should be available from the static class which can be
+used in a way similar to the other sensor instances.  It needs a similar interface.
+
+
+Configuration should use these methods:
+
+1.  In the builder setup, sensor instances should be injectable as scoped or singletons.
+
+2.  Code that accesses sensors should rely on:
+	a  An instance of IAcceleration, IGeolocation, IOrientationSensor
+	b  The source of the instance could be the static manager class provided by this project.
+	c  Settings can be set initially where the injection happens, or anywhere else.
+
+
+Requirements:
+
+1.  Provide typical injection usage examples.
+2.  Provide sample consumer code accessing these instances.
+3.  Provide a static class interface from which any of these instances can be retrieved.
+4.  Allow one sensor instance to combine the features in any way desired.
+5.  Consider switches on the static class that allows features to be turned on and off, 
+    even for injected instances.
+
+
+
+
+
+

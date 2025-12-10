@@ -1,31 +1,37 @@
 ﻿@page "/"
+@using MauiSensorFeeds.Calculated
 
 <div>
     <div class="row">
-        <div class="col-5 label">Accel/Braking</div>
-        <div class="col-6 large-label with-margins @(brakeRateClass)" >
-            @model.AccelFromLocations @model.AccelLabel
+        <div class="col-4 home-label">Accel / Braking</div>
+        <div class="col-7 large-label with-margins @(brakeRateClass)" >
+            @model.HorizontalAccel @model.AccelLabel
         </div>
     </div>
     <div class="row">
-        <div class="col-5 label">Speed</div>
-        <div class="col-6 large-label with-margins">@model.Speed @model.SpeedLabel</div>
+        <div class="col-4 home-label">Speed</div>
+        <div class="col-7 large-label with-margins">@model.Speed @model.SpeedLabel</div>
     </div>
 </div>
 
 @code {
 
-    private SensorManagerModel mgr;
-    private SensorValuesModel model;
+    private CalculatedModel model;
     private string brakeRateClass = "bg-info";
 
-    public Home()
+    public Home(IAccelerometer accelerometer, 
+        IOrientationSensor orientationSensor, 
+        IGeolocation geolocation)
     {
         try
         {
-            mgr = SensorManagerModel.GetSensorManagerModel();
-            model = new SensorValuesModel(mgr);
-            mgr.ReadingChanged += this.UpdateValues;
+            (accelerometer as AccelerometerSensor)?.Start();
+            (orientationSensor as Orientation_Sensor)?.Start();
+            (geolocation as GeolocationSensor)?.Start();
+
+            var feed = SensorFeeds.GetSensorFeeds();
+
+            model = feed.Model;
         }
         catch (Exception ex)
         {
@@ -35,22 +41,21 @@
 
     protected override void OnInitialized() 
     {
-        mgr.TriggerRecalc();
+        model.Recalculate();
     }
 
-    public void UpdateValues(object? sender, ReadingsChangedEventArgs args)
+    public void UpdateValues(object? sender, CalculatedModelChangedEventArgs args)
     {
-        model = args.Data;
+        model = args.Model;
         this.StateHasChanged();
         brakeRateClass = 
-            (Math.Abs(model.HorizAccel) > model.AccelBrakeLimit) ? 
+            (Math.Abs(model.HorizontalAccel) > CalculatedModel.AccelBrakeLimit) ?
             "blinking bg-danger danger-white" :
             "bg-info";
     }
 
     public void Dispose()
     {
-        mgr.ReadingChanged -= this.UpdateValues;
     }
 
 }

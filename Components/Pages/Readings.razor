@@ -4,12 +4,12 @@
 <table class="table">
     <tbody>
         <tr>
-            <td>Direction</td>
+            <td>Travel Direction</td>
             <td>@model.AngleOfTravel</td>
             <td>degrees</td>
         </tr>
         <tr>
-            <td>Speed</td>
+            <td>Travel Speed</td>
             <td>@model.Location.Speed</td>
             <td>@model.SpeedLabel</td>
         </tr>
@@ -30,38 +30,28 @@
         </tr>
         <tr>
             <td>Altitude</td>
-            <td>@model.Location.Altitude</td>
+            <td>@Math.Round(model.Location.Altitude.GetValueOrDefault(0), 2)</td>
             <td>meters</td>
         </tr>
         <tr>
-            <td>Location Buffer</td>
-            <td>@model.LocationPoints</td>
-            <td>readings</td>
-        </tr>
-        <tr>
             <td>Orientation.X</td>
-            <td>@Math.Round(model.Orientation_X, 6)</td>
+            <td>@Math.Round(model.Orientation_X, 5)</td>
             <td>units</td>
         </tr>
         <tr>
             <td>Orientation.Y</td>
-            <td>@Math.Round(model.Orientation_Y, 6)</td>
+            <td>@Math.Round(model.Orientation_Y, 5)</td>
             <td>units</td>
         </tr>
         <tr>
             <td>Orientation.Z</td>
-            <td>@Math.Round(model.Orientation_Z, 6)</td>
+            <td>@Math.Round(model.Orientation_Z, 5)</td>
             <td>units</td>
         </tr>
         <tr>
             <td>Orientation.W</td>
-            <td>@Math.Round(model.Orientation_W, 6)</td>
+            <td>@Math.Round(model.Orientation_W, 5)</td>
             <td>units</td>
-        </tr>
-        <tr>
-            <td>Orientation Buffer</td>
-            <td>@model.OrientationPoints</td>
-            <td>readings</td>
         </tr>
         <tr>
             <td>Roll</td>
@@ -94,11 +84,6 @@
             <td>@model.AccelLabel</td>
         </tr>
         <tr>
-            <td>Acceleration Buffer</td>
-            <td>@model.AccelerationPoints</td>
-            <td>readings</td>
-        </tr>
-        <tr>
             <td>Abs.Accel.X</td>
             <td>@Math.Round(model.AbsAcceleration_X, 5)</td>
             <td>@model.AccelLabel</td>
@@ -123,16 +108,14 @@
     public double horizontalAccel;
     public double Speed;
 
-    private SensorManagerModel mgr;
-    private SensorValuesModel model;
+    private CalculatedModel model;
 
     public Readings()
     {
         try
         {
-            mgr = SensorManagerModel.GetSensorManagerModel();
-            model = new SensorValuesModel(mgr);
-            mgr.ReadingChanged += this.UpdateValues;
+            model = CalculatedModel.GetModel();
+            model.CalculatedValuesChanged += this.UpdateValues;
         }
         catch (Exception ex)
         {
@@ -142,17 +125,19 @@
 
     protected override void OnInitialized()
     {
-        mgr.TriggerRecalc();
+        model.Recalculate();
     }
 
-    public void UpdateValues(object? sender, ReadingsChangedEventArgs args)
+    public void UpdateValues(object? sender, CalculatedModelChangedEventArgs args)
     {
-        model = args.Data;
+        model = args.Model;
+        horizontalAccel = Math.Round(model.HorizAccel, 3);
+        Speed = model.Location.Speed ?? 0;
         this.StateHasChanged();
     }
 
     public void Dispose()
     {
-        mgr.ReadingChanged -= this.UpdateValues;
+        model.CalculatedValuesChanged -= this.UpdateValues;
     }
 }
