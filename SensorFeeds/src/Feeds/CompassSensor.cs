@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MauiSensorFeeds.Extensions;
 using Sensors = Microsoft.Maui.Devices.Sensors;
+using MauiSensorFeeds.Data;
 
 namespace MauiSensorFeeds.Feeds
 {
@@ -18,7 +19,10 @@ namespace MauiSensorFeeds.Feeds
         public CompassSensor(string sourceDataFilename) : base(SensorType.Compass, sourceDataFilename)
         {
             DefaultCompass.ReadingChanged += this.HandleReadingChanged;
-            SensorFeeds.GetSensorFeeds().SetCompass(this);
+        }
+
+        public CompassSensor() : base(SensorType.Compass)
+        {
         }
 
         private void HandleReadingChanged(object? sender, CompassChangedEventArgs e)
@@ -26,23 +30,17 @@ namespace MauiSensorFeeds.Feeds
             ReadingChangeEvent(e.Reading.HeadingMagneticNorth);
         }
 
-        public event EventHandler<CompassChangedEventArgs>? ReadingChanged;
-
         public override void Dispose()
         {
             Stop();
             base.Dispose();
         }
 
-        public override void Start()
+        public override void Start(SensorSpeed speed = SensorSpeed.Default)
         {
-            Start(sensorSpeed, false);
-        }
-
-        public void Start(SensorSpeed _sensorSpeed)
-        {
-            this.sensorSpeed = _sensorSpeed;
-            Start(_sensorSpeed, false);
+            if (speed != SensorSpeed.Default)
+                sensorSpeed = speed;
+            Start(speed, false);
         }
 
         public void Start(SensorSpeed sensorSpeed, bool applyLowPassFilter)
@@ -50,9 +48,10 @@ namespace MauiSensorFeeds.Feeds
             if (this.IsReadingFromFile)
             {
                 isMonitoring = true;
-                StartReadingData().Wait();
+                StartReadingData();
             }
-            else
+            else if (!DefaultCompass.IsMonitoring &&
+                     DefaultCompass.IsSupported)
             {
                 DefaultCompass.Start(sensorSpeed, applyLowPassFilter);
                 isMonitoring = DefaultCompass.IsMonitoring;
@@ -65,12 +64,12 @@ namespace MauiSensorFeeds.Feeds
             {
                 isMonitoring = false;
             }
-            else
+            else if (DefaultCompass.IsSupported)
             {
                 DefaultCompass.Stop();
                 isMonitoring = DefaultCompass.IsMonitoring;
-                SensorInputData?.SaveToFile();
-                SensorOutputData?.SaveToFile();
+                //SensorInputData?.SaveToFile();
+                //SensorOutputData?.SaveToFile();
             }
         }
 
@@ -94,5 +93,23 @@ namespace MauiSensorFeeds.Feeds
             var args = new CompassChangedEventArgs(new CompassData(value));
             ReadingChanged?.Invoke(null, args);
         }
+
+        #region events
+
+        public event EventHandler<CompassChangedEventArgs>? ReadingChanged;
+
+        public override void SetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<CompassChangedEventArgs>)
+                this.ReadingChanged += handler as EventHandler<CompassChangedEventArgs>;
+        }
+
+        public override void UnsetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<CompassChangedEventArgs>)
+                this.ReadingChanged -= handler as EventHandler<CompassChangedEventArgs>;
+        }
+
+        #endregion
     }
 }

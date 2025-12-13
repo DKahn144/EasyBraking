@@ -1,4 +1,5 @@
 ﻿using MauiSensorFeeds.BaseModels;
+using MauiSensorFeeds.Data;
 using MauiSensorFeeds.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -80,7 +81,7 @@ namespace MauiSensorFeeds.Feeds
             }
             if (reportValue != null)
             {
-                _sensor.CurrentValue = reportValue;
+                _sensor.currentValue = reportValue;
                 lastNotifyTime = DateTime.UtcNow;
             }
             return reportValue;
@@ -148,7 +149,7 @@ namespace MauiSensorFeeds.Feeds
 
         public void Dispose()
         {
-            InputBuffer.Flush();
+            //InputBuffer.Flush();
         }
 
         #endregion

@@ -1,6 +1,15 @@
-﻿using Microsoft.Maui;
-using Microsoft.Maui.Controls;
+﻿using CommunityToolkit.Maui.Storage;
 using MauiSensorFeeds;
+using MauiSensorFeeds.Feeds;
+using MauiSensorFeeds.Interfaces;
+using MauiSensorFeeds.Calculated;
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices.Sensors;
+using System;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EasyBraking
 {
@@ -14,25 +23,26 @@ namespace EasyBraking
         protected override Window CreateWindow(IActivationState? activationState)
         {
             var window = new Window(new MainPage()) { Title = "EASY!" };
-            window.Deactivated += (s, e) =>
+            window.Destroying += async (s, e) =>
             {
-                CloseSensors();
+                await CloseSensorsAsync();
             };
             return window;
         }
 
-        protected void CloseSensors()
+        protected async Task CloseSensorsAsync()
         {
             var feeds = SensorFeeds.GetSensorFeeds();
             feeds.AccelerometerSource?.Stop();
             feeds.OrientationSensorSource?.Stop();
-            feeds.GeolocationSource?.StopListeningForeground();
+            feeds.GeolocationSource?.Stop();
             feeds.CompassSource?.Stop();
+            feeds.CalculatedModelSource?.Stop();
         }
 
-        public override void CloseWindow(Window window)
+        public override async void CloseWindow(Window window)
         {
-            CloseSensors();
+            await CloseSensorsAsync();
             base.CloseWindow(window);
         }
     }

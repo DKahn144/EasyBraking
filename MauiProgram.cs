@@ -11,6 +11,9 @@ using Microsoft.Maui.Hosting;
 using System;
 using MauiSensorFeeds.Interfaces;
 using Sensors =  Microsoft.Maui.Devices.Sensors;
+using MauiSensorFeeds.Calculated;
+using MauiSensorFeeds;
+using CommunityToolkit.Maui;
 
 namespace EasyBraking
 {
@@ -19,30 +22,47 @@ namespace EasyBraking
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
-            builder
+
+            builder.UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
 
-            builder.UseMauiApp<App>();
-
             builder.Services.AddMauiBlazorWebView();
 
-            AccelerometerSensor accelerometer = new AccelerometerBuffer();
-            Orientation_Sensor orientationSensor = new OrientationBuffer();
-            GeolocationSensor geolocation = new GeolocationSensor();
-
+            AccelerometerSensor accelerometer;
+            Orientation_Sensor orientationSensor;
+            GeolocationSensor geolocation;
+            CalculatedModelSensor calculatedModelSensor;
+            CompassSensor compass;
+            try
+            {
+                accelerometer = new AccelerometerBuffer();
+                orientationSensor = new OrientationBuffer();
+                geolocation = new GeolocationSensor();
+                compass = new CompassSensor();
+                calculatedModelSensor = new CalculatedModelSensor();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error initializing sensors: " + ex.Message);
+            }
 #if DEBUG
             builder.Services.AddHybridWebViewDeveloperTools();
             builder.Logging.AddDebug();
 
             // logging
             accelerometer.WriteInputDataFile = "accelerometerInputData.csv";
-            accelerometer.WriteOutputDataFile = "accelerometerOutputData.csv";
             orientationSensor.WriteInputDataFile = "orientationInputData.csv";
-            orientationSensor.WriteOutputDataFile = "orientationOutputData.csv";
             geolocation.WriteInputDataFile = "locationData.csv";
+            /*
+            accelerometer.ReadDataFile = "accelerometerInputData.csv";
+            accelerometer.WriteOutputDataFile = "accelerometerOutputData.csv";
+            orientationSensor.ReadDataFile = "orientationInputData.csv";
+            calculatedModelSensor.WriteOutputDataFile = "calculatedModelOutputData.csv";
+            */
 
             // testing
             /*
@@ -57,6 +77,7 @@ namespace EasyBraking
             builder.Services.AddSingleton(typeof(IAccelerometer), accelerometer);
             builder.Services.AddSingleton(typeof(IOrientationSensor), orientationSensor);               
             builder.Services.AddSingleton(typeof(IGeolocation), geolocation);
+            builder.Services.AddSingleton(typeof(CalculatedModelSensor), calculatedModelSensor);
 
             return builder.Build();
         }

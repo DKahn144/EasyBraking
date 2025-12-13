@@ -1,7 +1,8 @@
 ﻿using MauiSensorFeeds.BaseModels;
-using MauiSensorFeeds.Interfaces;
 using MauiSensorFeeds.Calculated;
+using MauiSensorFeeds.Interfaces;
 using Microsoft.Maui.Devices.Sensors;
+using System.Numerics;
 using Sensors = Microsoft.Maui.Devices.Sensors;
 
 namespace MauiSensorFeeds
@@ -22,7 +23,7 @@ namespace MauiSensorFeeds
         /// <summary>
         /// A centralized starting time for all sensor feeds
         /// </summary>
-        public static DateTime FeedStart = DateTime.UtcNow;
+        public static DateTime FeedStart = DateTime.MaxValue;
 
         public static long TicksSinceFeedStart()
         {
@@ -38,119 +39,164 @@ namespace MauiSensorFeeds
             return feeds;
         }
 
+        public static void StartAll(SensorSpeed speed = SensorSpeed.Default)
+        {
+            var feeds = GetSensorFeeds();
+            if (feeds.AccelerometerSource!.IsSupported)
+                feeds.AccelerometerSource?.Start(speed);
+            if (feeds.OrientationSensorSource!.IsSupported)
+                feeds.OrientationSensorSource?.Start(speed);
+            (feeds.GeolocationSource as IBaseSensor)?.Start();
+            if (feeds.CompassSource!.IsSupported)
+                feeds.CompassSource?.Start(speed);
+            feeds.CalculatedModelSource?.Start();
+            FeedStart = DateTime.UtcNow;
+        }
+
         private SensorFeeds()
         {
         }
 
-        public CalculatedModel Model => CalculatedModel.GetModel();
+        #region model
 
+        private IBaseSensor? calculatedModelSource = null;
+
+        public IBaseSensor? CalculatedModelSource => calculatedModelSource;
+
+        public CalculatedModelSensor? CalculatedModelSensor => calculatedModelSource as CalculatedModelSensor;
+
+        public CalculatedModel? Model => CalculatedModelSensor?.CurrentValue;
+
+        #endregion
 
         #region Accelerometer
 
-        private Sensors.IAccelerometer accelerometerSource = Sensors.Accelerometer.Default;
+        private BaseSensor<Vector3>? accelerometerSource = null;
 
-        public Sensors.IAccelerometer AccelerometerSource => accelerometerSource;
+        public BaseSensor<Vector3>? AccelerometerSource => accelerometerSource;
 
-        /// <summary>
-        /// Allow injection of an accelerometer for testing or simulation. If not set, it defaults to native.
-        /// </summary>
-        /// <param name="accelerometer"></param>
-        public SensorFeeds SetAccelerometer(Sensors.IAccelerometer accelerometer)
-        {
-            if (accelerometer != null)
-            {
-                if (accelerometer != accelerometerSource)
-                {
-                    var monitoring = accelerometerSource.IsMonitoring;
-                    accelerometerSource.ReadingChanged -= Model.Accelerometer_ReadingChanged;
-                    if (monitoring)
-                        accelerometerSource.Stop();
-                    accelerometerSource = accelerometer;
-                    if (monitoring)
-                        accelerometer.Start(SensorSpeed.UI);
-                }
-                accelerometerSource.ReadingChanged += Model.Accelerometer_ReadingChanged;
-                Model.Recalculate();
-            }
-
-            return this;
-        }
+        public IAccelerometer? Accelerometer => accelerometerSource as IAccelerometer;
 
         #endregion
 
         #region Orientation
 
-        private Sensors.IOrientationSensor orientationSensorSource = Sensors.OrientationSensor.Default;
+        private BaseSensor<Quaternion>? orientationSensorSource = null;
 
-        public Sensors.IOrientationSensor OrientationSensorSource => orientationSensorSource;
+        public BaseSensor<Quaternion>? OrientationSensorSource => orientationSensorSource;
 
-        /// <summary>
-        /// Allow injection of an OrientationSensor for testing or simulation.
-        /// OrientationSensor must be injected before initializing manager instance, or it defaults to native.
-        /// </summary>
-        /// <param name="orientationSensor"></param>
-        public SensorFeeds SetOrientationSensor(Sensors.IOrientationSensor orientationSensor)
-        {
-            if (orientationSensor != null)
-            {
-                if (orientationSensor != orientationSensorSource)
-                {
-                    var monitoring = orientationSensorSource.IsMonitoring;
-                    if (monitoring)
-                    {
-                        orientationSensorSource.Stop();
-                    }
-                    orientationSensorSource.ReadingChanged -= Model.OrientationSensorSource_ReadingChanged;
-                    orientationSensorSource = orientationSensor;
-                    if (monitoring)
-                    {
-                        orientationSensorSource.Start(SensorSpeed.UI);
-                    }
-                }
-                orientationSensorSource.ReadingChanged += Model.OrientationSensorSource_ReadingChanged;
-                Model.Recalculate();
-            }
-            return this;
-        }
+        public IOrientationSensor? OrientationSensor => orientationSensorSource as IOrientationSensor;
 
         #endregion
 
         #region Location
 
-        private Sensors.IGeolocation geolocationSource = Sensors.Geolocation.Default;
+        private BaseSensor<Location>? geolocationSource = null;
 
-        public Sensors.IGeolocation GeolocationSource => geolocationSource;
+        public BaseSensor<Location>? GeolocationSource => geolocationSource;
 
-        /// <summary>
-        /// Allow injection of an location sensor for testing or simulation. If not set, it defaults to native.
-        /// GeolocationSensor must be injected before initializing manager instance.
-        /// </summary>
-        /// <param name="geolocation"></param>
-        public SensorFeeds SetGeolocationSensor(Sensors.IGeolocation geolocation)
+        public IGeolocation? Geolocation => geolocationSource as IGeolocation;
+
+        #endregion
+
+        #region Compass
+
+        private BaseSensor<double>? compassSource = null;
+
+        public BaseSensor<double>? CompassSource => compassSource;
+
+        public ICompass? Compass => compassSource as ICompass;
+
+        public static string FilePath { get; set; } = "?"; // "/storage/emulated/0/Documents";
+
+        internal void SetSensor(IBaseSensor sensor)
         {
-            if (geolocation != null)
+            bool monitoring = false;
+            var source = GetSensor(sensor.SensorType);
+            if (source is IBaseSensor)
             {
-                if (geolocation != geolocationSource)
+                IBaseSensor? currentSensor = (IBaseSensor)source;
+                if (currentSensor != null)
                 {
-
-                    var listening = geolocationSource.IsListeningForeground;
-                    if (listening)
+                    monitoring = currentSensor.IsMonitoring;
+                    if (monitoring)
                     {
-                        geolocationSource.StopListeningForeground();
+                        currentSensor.Stop();
                     }
-                    geolocationSource.LocationChanged -= Model.GeolocationSource_LocationChanged;
-                    geolocationSource = geolocation;
-                    if (listening)
+                    foreach (var handler in currentSensor!.RegisteredHandlers)
                     {
-                        var request = new GeolocationListeningRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(1));
-                        geolocationSource.StartListeningForegroundAsync(request).Wait();
+                        currentSensor.UnregisterHandler(handler);
+                        sensor.RegisterHandler(handler);
                     }
                 }
-                geolocationSource.LocationChanged += Model.GeolocationSource_LocationChanged;
-                Model.Recalculate();
             }
-            return this;
+            ReplaceSensor(sensor);
+            if (monitoring)
+                sensor.Start();
         }
+
+        private void ReplaceSensor(IBaseSensor sensor)
+        {
+            if (sensor != null)
+            {
+                switch (sensor.SensorType)
+                {
+                    case SensorType.Accelerometer:
+                        {
+                            if (sensor is IAccelerometer)
+                                accelerometerSource = sensor as BaseSensor<Vector3>;
+                            break;
+                        }
+                    case SensorType.Orientation:
+                        {
+                            if (sensor is IOrientationSensor)
+                                orientationSensorSource = sensor as BaseSensor<Quaternion>;
+                            break;
+                        }
+                    case SensorType.Location:
+                        {
+                            if (sensor is IGeolocation)
+                                geolocationSource = sensor as BaseSensor<Location>;
+                            break;
+                        }
+                    case SensorType.Compass:
+                        {
+                            if (sensor is ICompass)
+                                compassSource = sensor as BaseSensor<double>;
+                            break;
+                        }
+                    case SensorType.Calculated:
+                        {
+                            if (sensor is CalculatedModelSensor)
+                                calculatedModelSource = (sensor as BaseSensor<CalculatedModel>);
+                            break;
+                        }
+                    default:
+                        break;
+                }
+            }
+        }
+
+        private object? GetSensor(SensorType sensorType)
+        {
+            switch (sensorType)
+            {
+                case SensorType.Accelerometer:
+                    return AccelerometerSource;
+                case SensorType.Orientation:
+                    return OrientationSensorSource;
+                case SensorType.Location:
+                    return GeolocationSource;
+                case SensorType.Compass:
+                    return CompassSource;
+                case SensorType.Calculated:
+                    return CalculatedModelSource;
+                default:
+                    return null;
+            }
+        }
+
+        #endregion
 
         /*
         static ISettingsService CurrentService = new DefaultSettingsService();
@@ -165,50 +211,6 @@ namespace MauiSensorFeeds
 
         public static ISettingsService Service => CurrentService;
         */
-
-
-        #endregion
-
-        #region Compass
-
-        private Sensors.ICompass compassSource = Sensors.Compass.Default;
-
-        public Sensors.ICompass CompassSource => compassSource;
-
-        /// <summary>
-        /// Allow injection of an OrientationSensor for testing or simulation.
-        /// OrientationSensor must be injected before initializing manager instance, or it defaults to native.
-        /// </summary>
-        /// <param name="compass"></param>
-        public SensorFeeds SetCompass(Sensors.ICompass compass)
-        {
-            if (compass != null)
-            {
-                if (compassSource != compass)
-                {
-                    bool monitoring = compassSource.IsMonitoring;
-                    if (monitoring)
-                    {
-                        compassSource.Stop();
-                    }
-                    compassSource.ReadingChanged -= Model.Compass_ReadingChanged;
-                    var speed = (compassSource as BaseSensor<Double>)?.SensorSpeed ?? SensorSpeed.Default;
-                    compassSource = compass;
-                    if (monitoring)
-                    {
-                        compassSource.Start(speed);
-                    }
-                }
-                compassSource.ReadingChanged += Model.Compass_ReadingChanged;
-            }
-            else
-            {
-                SetCompass(Sensors.Compass.Default);
-            }
-            return this;
-        }
-
-        #endregion
 
     }
 }

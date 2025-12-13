@@ -40,7 +40,7 @@ namespace MauiSensorFeeds.Feeds
     {
         private SensorBuffer<Vector3> sensorBuffer;
 
-        public AccelerometerBuffer(BufferingStrategy strategy = BufferingStrategy.AverageOfLast10Milliseconds)
+        public AccelerometerBuffer(BufferingStrategy strategy = BufferingStrategy.AverageOfLast100Readings)
             : base()
         {
             this.sensorBuffer = new Vector3Buffer(this, strategy);

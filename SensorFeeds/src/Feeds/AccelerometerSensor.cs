@@ -1,5 +1,6 @@
 ﻿using MauiSensorFeeds.BaseModels;
 using MauiSensorFeeds.Interfaces;
+using MauiSensorFeeds.Data;
 using Microsoft.Maui.Devices.Sensors;
 using System;
 using System.Collections.Generic;
@@ -14,24 +15,21 @@ namespace MauiSensorFeeds.Feeds
     {
         private IAccelerometer accelerometerSource = Accelerometer.Default;
 
-        public event EventHandler<AccelerometerChangedEventArgs>? ReadingChanged;
-
-        public event EventHandler? ShakeDetected;
-
         public override bool IsMonitoring => accelerometerSource.IsMonitoring;
 
         public override bool IsSupported => accelerometerSource.IsSupported;
 
-        public override void Start()
+        public void Start()
         {
             this.Start(this.sensorSpeed);
         }
 
-        public async void Start(SensorSpeed sensorSpeed)
+        public override void Start(SensorSpeed sensorSpeed = SensorSpeed.Default)
         {
             if (!IsReadingFromFile)
             {
-                if (!accelerometerSource.IsMonitoring)
+                if (!accelerometerSource.IsMonitoring &&
+                    accelerometerSource.IsSupported)
                 {
                     this.sensorSpeed = sensorSpeed;
                     accelerometerSource.Start(sensorSpeed);
@@ -40,7 +38,7 @@ namespace MauiSensorFeeds.Feeds
             }
             else
             {
-                await StartReadingData();
+                StartReadingData();
             }
         }
 
@@ -50,24 +48,24 @@ namespace MauiSensorFeeds.Feeds
             if (!IsReadingFromFile)
             {
                 accelerometerSource.Stop();
-                SensorInputData?.SaveToFile();
-                SensorOutputData?.SaveToFile();
+                //SensorInputData?.SaveToFile();
+                //SensorOutputData?.SaveToFile();
             }
         }
 
         public AccelerometerSensor(string testDataFile) : base(SensorType.Accelerometer)
         {
             this.ReadDataFile = testDataFile;
-            SensorFeeds.GetSensorFeeds().SetAccelerometer(this);
         }
 
         public AccelerometerSensor() : base(SensorType.Accelerometer)
         {
             AttachEventListeners();
-            SensorFeeds.GetSensorFeeds().SetAccelerometer(this);
         }
 
         public Vector3 ShakeEvent => new Vector3(float.NaN, float.NaN, float.NaN);
+
+        public object SensorInputStream { get; set; }
 
         protected void Accelerometer_ReadingChanged(object? sender, AccelerometerChangedEventArgs e)
         {
@@ -79,6 +77,8 @@ namespace MauiSensorFeeds.Feeds
             ReadingChangeEvent(ShakeEvent);
             ShakeDetected?.Invoke(sender, e);
         }
+
+        #region protected overrides
 
         protected override void AttachEventListeners()
         {
@@ -122,5 +122,30 @@ namespace MauiSensorFeeds.Feeds
             return new Vector3Data(dataFilename);
         }
 
+        #endregion
+
+        #region events
+
+        public event EventHandler<AccelerometerChangedEventArgs>? ReadingChanged;
+
+        public event EventHandler? ShakeDetected;
+
+        public override void SetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<AccelerometerChangedEventArgs>)
+                this.ReadingChanged += handler as EventHandler<AccelerometerChangedEventArgs>;
+            else if (handler is EventHandler)
+                this.ShakeDetected += handler as EventHandler;
+        }
+
+        public override void UnsetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<AccelerometerChangedEventArgs>)
+                this.ReadingChanged -= handler as EventHandler<AccelerometerChangedEventArgs>;
+            else if (handler is EventHandler)
+                this.ShakeDetected -= handler as EventHandler;
+        }
+
+        #endregion
     }
 }

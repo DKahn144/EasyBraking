@@ -1,5 +1,6 @@
 ﻿using MauiSensorFeeds.BaseModels;
 using MauiSensorFeeds.Interfaces;
+using MauiSensorFeeds.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,18 +18,13 @@ namespace MauiSensorFeeds.Feeds
 
         public bool IsListeningForeground => isListeningForeground;
 
-        public event EventHandler<GeolocationLocationChangedEventArgs>? LocationChanged;
-        public event EventHandler<GeolocationListeningFailedEventArgs>? ListeningFailed;
-
         public GeolocationSensor(string testDataFile) : base(SensorType.Location) 
         {
             this.ReadDataFile = testDataFile;
-            SensorFeeds.GetSensorFeeds().SetGeolocationSensor(this);
         }
 
         public GeolocationSensor() : base(SensorType.Location) 
         {
-            SensorFeeds.GetSensorFeeds().SetGeolocationSensor(this);
         }
 
         public void GeolocationSensor_LocationChanged(object? sender, GeolocationLocationChangedEventArgs e)
@@ -57,7 +53,7 @@ namespace MauiSensorFeeds.Feeds
             return await geolocation.GetLocationAsync(request, cancelToken);
         }
 
-        public async override void Start()
+        public async override void Start(SensorSpeed speed = SensorSpeed.Default)
         {
             GeolocationListeningRequest request = 
                 new GeolocationListeningRequest(GeolocationAccuracy.Default, TimeSpan.FromSeconds(1));
@@ -68,10 +64,10 @@ namespace MauiSensorFeeds.Feeds
         {
             if (IsReadingFromFile)
             {
-                await StartReadingData();
+                StartReadingData();
                 isListeningForeground = true;
             }
-            else 
+            else
             {
                 AttachEventListeners();
                 if (!geolocation.IsListeningForeground)
@@ -103,8 +99,8 @@ namespace MauiSensorFeeds.Feeds
             {
                 geolocation.StopListeningForeground();
                 DetachEventListeners();
-                SensorInputData?.SaveToFile();
-                SensorOutputData?.SaveToFile();
+                //SensorInputData?.SaveToFile();
+                //SensorOutputData?.SaveToFile();
             }
         }
         
@@ -142,5 +138,27 @@ namespace MauiSensorFeeds.Feeds
         {
             return new LocationData(dataFilename);
         }
+
+        #region events
+
+        public event EventHandler<GeolocationLocationChangedEventArgs>? LocationChanged;
+        public event EventHandler<GeolocationListeningFailedEventArgs>? ListeningFailed;
+
+        public override void SetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<GeolocationLocationChangedEventArgs>)
+                this.LocationChanged += handler as EventHandler<GeolocationLocationChangedEventArgs>;
+            if (handler is EventHandler<GeolocationListeningFailedEventArgs>)
+                this.ListeningFailed += handler as EventHandler<GeolocationListeningFailedEventArgs>;
+        }
+
+        public override void UnsetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<GeolocationLocationChangedEventArgs>)
+                this.LocationChanged -= handler as EventHandler<GeolocationLocationChangedEventArgs>;
+            if (handler is EventHandler<GeolocationListeningFailedEventArgs>)
+                this.ListeningFailed -= handler as EventHandler<GeolocationListeningFailedEventArgs>;
+        }
+        #endregion
     }
 }

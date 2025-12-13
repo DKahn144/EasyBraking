@@ -5,7 +5,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MauiSensorFeeds.BaseModels
+namespace MauiSensorFeeds.Data
 {
     public class QuaternionData : SensorData<Quaternion>
     {
@@ -14,9 +14,9 @@ namespace MauiSensorFeeds.BaseModels
         { 
         }
 
-        protected override string ConvertValueToCSV(Quaternion value)
+        protected override string ConvertValueToCSV(Quaternion value, long ticks)
         {
-            return $"{value.X},{value.Y},{value.Z},{value.W}";
+            return $"{ticks},{value.X},{value.Y},{value.Z},{value.W}";
         }
 
         protected override string CSVHeaderLine()
@@ -24,21 +24,20 @@ namespace MauiSensorFeeds.BaseModels
             return "Ticks,X,Y,Z,W";
         }
 
-        protected override Quaternion ParseValueFromCSV(string data)
+        protected override Quaternion ParseValueFromCSV(string data, out long ticks)
         {
             string[] parts = data.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 4)
+            ticks = 0;
+            if (parts.Length >= 5)
             {
-                float.TryParse(parts[0], out float x);
-                float.TryParse(parts[1], out float y);
-                float.TryParse(parts[2], out float z);
-                float.TryParse(parts[3], out float w);
+                long.TryParse(parts[0], out ticks);
+                float.TryParse(parts[1], out float x);
+                float.TryParse(parts[2], out float y);
+                float.TryParse(parts[3], out float z);
+                float.TryParse(parts[4], out float w);
                 return new Quaternion(x, y, z, w);
             }
-            else
-            {
-                throw new ArgumentException($"Could not parse a Quaternion (X,Y,Z,W) from string \"{data}\"");
-            }
+            return Quaternion.Zero;
         }
     }
 }

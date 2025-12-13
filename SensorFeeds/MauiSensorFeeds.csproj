@@ -30,4 +30,10 @@
 	  <Folder Include="Platforms\Windows\" />
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+	  <PackageReference Include="PortableStorage.Android">
+	    <Version>1.2.71</Version>
+	  </PackageReference>
+	</ItemGroup>
+
 </Project>

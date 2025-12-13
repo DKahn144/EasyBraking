@@ -4,6 +4,11 @@
 <table class="table">
     <tbody>
         <tr>
+            <td>Ticks</td>
+            <td>@SensorFeeds.TicksSinceFeedStart()</td>
+            <td>@model.AccelLabel</td>
+        </tr>
+        <tr>
             <td>Travel Direction</td>
             <td>@model.AngleOfTravel</td>
             <td>degrees</td>
@@ -107,20 +112,13 @@
 
     public double horizontalAccel;
     public double Speed;
-
+    private SensorFeeds feeds = SensorFeeds.GetSensorFeeds();
     private CalculatedModel model;
 
     public Readings()
     {
-        try
-        {
-            model = CalculatedModel.GetModel();
-            model.CalculatedValuesChanged += this.UpdateValues;
-        }
-        catch (Exception ex)
-        {
-            throw;
-        }
+        model = CalculatedModel.GetModel();
+        feeds.CalculatedModelSensor!.CalculatedValuesChanged += this.UpdateValues;
     }
 
     protected override void OnInitialized()
@@ -138,6 +136,6 @@
 
     public void Dispose()
     {
-        model.CalculatedValuesChanged -= this.UpdateValues;
+        feeds.CalculatedModelSensor!.CalculatedValuesChanged -= this.UpdateValues;
     }
 }

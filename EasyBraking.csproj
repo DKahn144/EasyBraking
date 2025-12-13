@@ -28,7 +28,7 @@
         <ApplicationId>com.testedmetals.easybraking</ApplicationId>
 
         <!-- Versions -->
-        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationDisplayVersion>1.10.1</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
         <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
@@ -50,11 +50,13 @@
       <RunAOTCompilation>False</RunAOTCompilation>
       <PublishTrimmed>False</PublishTrimmed>
       <AndroidKeyStore>False</AndroidKeyStore>
+      <AndroidEnableMultiDex>False</AndroidEnableMultiDex>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
       <AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
       <AndroidKeyStore>False</AndroidKeyStore>
+      <AndroidEnableMultiDex>False</AndroidEnableMultiDex>
     </PropertyGroup>
 
     <ItemGroup>
@@ -107,6 +109,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="CommunityToolkit.Maui" Version="12.2.0" />
         <PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.11" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="9.0.11" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.11" />

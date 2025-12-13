@@ -5,33 +5,37 @@
     <div class="row">
         <div class="col-4 home-label">Accel / Braking</div>
         <div class="col-7 large-label with-margins @(brakeRateClass)" >
-            @model.HorizontalAccel @model.AccelLabel
+            @Math.Round(model.HorizontalAccel,1) @model.AccelLabel
         </div>
     </div>
     <div class="row">
         <div class="col-4 home-label">Speed</div>
-        <div class="col-7 large-label with-margins">@model.Speed @model.SpeedLabel</div>
+        <div class="col-7 large-label with-margins">@Math.Round(model.Speed,1) @model.SpeedLabel</div>
+    </div>
+    <div>
+        <span>Storage: @filepath</span>
+        <button class="btn btn-primary" @onclick="Save">Click me</button>
     </div>
 </div>
 
-@code {
+            @code {
 
     private CalculatedModel model;
+    private string filepath = MauiSensorFeeds.SensorFeeds.FilePath;
     private string brakeRateClass = "bg-info";
+    private SensorFeeds feeds = SensorFeeds.GetSensorFeeds();
 
     public Home(IAccelerometer accelerometer, 
         IOrientationSensor orientationSensor, 
-        IGeolocation geolocation)
+        IGeolocation geolocation,
+        CalculatedModelSensor modelSensor)
     {
         try
         {
-            (accelerometer as AccelerometerSensor)?.Start();
-            (orientationSensor as Orientation_Sensor)?.Start();
-            (geolocation as GeolocationSensor)?.Start();
+            feeds.CalculatedModelSensor!.CalculatedValuesChanged += this.UpdateValues;
 
-            var feed = SensorFeeds.GetSensorFeeds();
-
-            model = feed.Model;
+            if (model == null)
+                model = feeds.Model!;
         }
         catch (Exception ex)
         {
@@ -41,7 +45,10 @@
 
     protected override void OnInitialized() 
     {
-        model.Recalculate();
+        SensorFeeds.StartAll(SensorSpeed.Default);
+        model = feeds.Model!;
+        if (model != null)
+            model.Recalculate();
     }
 
     public void UpdateValues(object? sender, CalculatedModelChangedEventArgs args)
@@ -52,6 +59,35 @@
             (Math.Abs(model.HorizontalAccel) > CalculatedModel.AccelBrakeLimit) ?
             "blinking bg-danger danger-white" :
             "bg-info";
+    }
+    
+    private async Task Save()
+    {
+        if (SensorFeeds.FilePath == "?")
+        {
+            var result = await FolderPicker.PickAsync(CancellationToken.None);
+            if (result.IsSuccessful)
+            {
+                SensorFeeds.FilePath = result.Folder.Path;
+                Console.WriteLine($">>>>>>>>>>>>>>>>>>>>>>>>>>>>> {SensorFeeds.FilePath}");
+                await SaveData((feeds.AccelerometerSource as AccelerometerSensor)?.SensorInputData);
+                await SaveData((feeds.AccelerometerSource as AccelerometerSensor)?.SensorOutputData);
+                await SaveData((feeds.OrientationSensorSource as Orientation_Sensor)?.SensorInputData);
+                await SaveData((feeds.OrientationSensorSource as Orientation_Sensor)?.SensorOutputData);
+                await SaveData((feeds.GeolocationSource as GeolocationSensor)?.SensorInputData);
+                await SaveData((feeds.CalculatedModelSource as CalculatedModelSensor)?.SensorInputData);
+            }
+        }
+    }
+
+    private async Task SaveData(ISensorData? sensorData)
+    {
+        if (sensorData != null)
+        {
+            await FileSaver.SaveAsync(sensorData.GetFullPathname(),
+                sensorData.WriteToStream(), CancellationToken.None);
+        }
+
     }
 
     public void Dispose()

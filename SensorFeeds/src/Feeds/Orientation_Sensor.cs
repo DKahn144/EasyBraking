@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Sensors = Microsoft.Maui.Devices.Sensors;
 using MauiSensorFeeds.Interfaces;
+using MauiSensorFeeds.Data;
 
 namespace MauiSensorFeeds.Feeds
 {
@@ -15,35 +16,31 @@ namespace MauiSensorFeeds.Feeds
         public Orientation_Sensor(string testDataFile) : base(SensorType.Location)
         {
             this.ReadDataFile = testDataFile;
-            SensorFeeds.GetSensorFeeds().SetOrientationSensor(this);
         }
 
-        public Orientation_Sensor() : base(SensorType.Location)
+        public Orientation_Sensor() : base(SensorType.Orientation)
         {
             AttachEventListeners();
-            SensorFeeds.GetSensorFeeds().SetOrientationSensor(this);
         }
 
-        public override void Start()
+        public override void Start(SensorSpeed speed = SensorSpeed.Default)
         {
-            this.Start(sensorSpeed);
-        }
-
-        public async void Start(SensorSpeed sensorSpeed)
-        {
+            if (speed != SensorSpeed.Default)
+                sensorSpeed = speed;
             if (!IsReadingFromFile)
             {
                 AttachEventListeners();
-                if (!orientationSensorSource.IsMonitoring)
+                if (!orientationSensorSource.IsMonitoring &&
+                    orientationSensorSource.IsSupported)
                 {
                     orientationSensorSource.Start(sensorSpeed);
+                    isMonitoring = true;
                 }
-                isMonitoring = true;
             }
             else
             {
                 DetachEventListeners();
-                await this.StartReadingData();
+                this.StartReadingData();
             }
         }
 
@@ -52,18 +49,18 @@ namespace MauiSensorFeeds.Feeds
             if (!IsReadingFromFile && orientationSensorSource.IsMonitoring)
             {
                 orientationSensorSource.Stop();
-                SensorInputData?.SaveToFile();
-                SensorOutputData?.SaveToFile();
+                //SensorInputData?.SaveToFile();
+                //SensorOutputData?.SaveToFile();
             }
             isMonitoring = false;
         }
-
-        public event EventHandler<OrientationSensorChangedEventArgs>? ReadingChanged;
 
         public void OrientationSensor_ReadingChanged(object? sender, OrientationSensorChangedEventArgs e)
         {
             ReadingChangeEvent(e.Reading.Orientation);
         }
+
+        #region protected overrides
 
         protected override void NotifyReadingChange(Quaternion value)
         {
@@ -98,5 +95,24 @@ namespace MauiSensorFeeds.Feeds
             return value.Length();
         }
 
+        #endregion
+
+        #region events
+
+        public event EventHandler<OrientationSensorChangedEventArgs>? ReadingChanged;
+
+        public override void SetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<OrientationSensorChangedEventArgs>)
+                this.ReadingChanged += handler as EventHandler<OrientationSensorChangedEventArgs>;
+        }
+
+        public override void UnsetHandlerToEvent(object handler)
+        {
+            if (handler is EventHandler<OrientationSensorChangedEventArgs>)
+                this.ReadingChanged -= handler as EventHandler<OrientationSensorChangedEventArgs>;
+        }
+
+        #endregion
     }
 }

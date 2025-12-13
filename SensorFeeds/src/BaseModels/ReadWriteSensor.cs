@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using MauiSensorFeeds.BaseModels;
+using MauiSensorFeeds.Data;
 
 namespace MauiSensorFeeds.BaseModels
 {
@@ -35,6 +35,7 @@ namespace MauiSensorFeeds.BaseModels
                     readDataFile = value;
                     SensorReadData = GenericSensorData(readDataFile);
                     DetachEventListeners();
+                    SensorReadData.LoadFromFile();
                 }
                 else
                 {
@@ -53,8 +54,8 @@ namespace MauiSensorFeeds.BaseModels
                 ThrowIfMonitoring(nameof(WriteInputDataFile));
                 CheckFileNames(readDataFile, value, writeOutputDataFile);
                 writeInputDataFile = value;
-                SensorInputData = GenericSensorData(writeInputDataFile);
-
+                SensorInputData = !string.IsNullOrEmpty(value) ? 
+                    GenericSensorData(writeInputDataFile) : null;
             }
         }
 
@@ -66,10 +67,12 @@ namespace MauiSensorFeeds.BaseModels
                 ThrowIfMonitoring(nameof(WriteOutputDataFile));
                 CheckFileNames(readDataFile, writeInputDataFile, value);
                 writeOutputDataFile = value;
-                SensorOutputData = GenericSensorData(writeOutputDataFile);
-
+                SensorOutputData = !string.IsNullOrEmpty(value) ? 
+                    GenericSensorData(writeOutputDataFile) : null;
             }
         }
+
+        public override bool IsSupported => base.IsSupported || IsReadingFromFile;
 
         public virtual SensorData<T>? SensorReadData { get; private set; }
         public virtual SensorData<T>? SensorInputData { get; private set; }
@@ -101,7 +104,7 @@ namespace MauiSensorFeeds.BaseModels
         /// <remarks>This method processes all values in the test sequence, notifying listeners in real
         /// time according to the timing specified by each value. Reading will only occur if monitoring is enabled. The
         /// method blocks until all values have been read and notified.</remarks>
-        public async Task StartReadingData()
+        public void StartReadingData()
         {
             if (this.IsReadingFromFile && !IsMonitoring)
             {
@@ -118,8 +121,12 @@ namespace MauiSensorFeeds.BaseModels
                     var readValues = SensorReadData?.TestValues;
                     if (readValues != null && readValues.Count > 0)
                     {
-                        await Task.Run(async () =>
+                        Task.Run(async () =>
                         {
+                            while (SensorFeeds.FeedStart > DateTime.UtcNow)
+                            {
+                                await Task.Delay(100);
+                            }
                             long startTics = SensorFeeds.FeedStart.Ticks;
                             int posn = 0;
                             while (readValues!.Count > posn)
@@ -129,19 +136,22 @@ namespace MauiSensorFeeds.BaseModels
                                     break;
                                 }
                                 long ticks = readValues!.Keys[posn];
-                                T value = readValues![posn];
+                                T value = readValues![ticks];
                                 if (value != null)
                                 {
                                     // A tick is 100 nanoseconds or 1/10000 microsecond
                                     var elapsedTicks = (DateTime.UtcNow.Ticks - startTics);
                                     if (elapsedTicks < ticks)
-                                        Thread.Sleep((int)((ticks - elapsedTicks) * 10000));
+                                    {
+                                        int millsecs = (int)((ticks - elapsedTicks) / 10000);
+                                        Thread.Sleep(millsecs);
+                                    }
+                                    posn++;
                                     if (isMonitoring)
                                     {
-                                        disp?.Dispatch(() =>
+                                        disp?.Dispatch(async () =>
                                         {
                                             ReadingChangeEvent(value);
-                                            posn++;
                                         });
                                     }
                                 }
@@ -158,8 +168,8 @@ namespace MauiSensorFeeds.BaseModels
 
         public virtual void Dispose()
         {
-            SensorOutputData?.Flush();
-            SensorInputData?.Flush();
+            //SensorOutputData?.Flush();
+            //SensorInputData?.Flush();
         }
 
         #endregion
@@ -178,7 +188,7 @@ namespace MauiSensorFeeds.BaseModels
             var result = CustomHandler(value);
             if (result != null && ValueOf(result) != 0)
             {
-                CurrentValue = result!;
+                currentValue = result!;
                 LogOutputValue(result);
                 LastOutputReadingTime = DateTime.UtcNow;
                 NotifyReadingChange(result);

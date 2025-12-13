@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text;
 using Microsoft.Maui.Animations;
+using MauiSensorFeeds.Interfaces;
 
-namespace MauiSensorFeeds.BaseModels
+namespace MauiSensorFeeds.Data
 {
-    public abstract partial class SensorData<T>
+    public abstract partial class SensorData<T> : ISensorData
     {
         private object valueListLock = new object();
 
@@ -23,8 +24,8 @@ namespace MauiSensorFeeds.BaseModels
 
         public SensorData() { }
 
-        public SensorData(string fileName) 
-        { 
+        public SensorData(string fileName)
+        {
             DataFileName = fileName ?? String.Empty;
         }
 
@@ -34,7 +35,7 @@ namespace MauiSensorFeeds.BaseModels
         {
             lock (valueListLock)
             {
-                testValues.Add(SensorFeeds.TicksSinceFeedStart(), value);
+                testValues[SensorFeeds.TicksSinceFeedStart()] = value;
             }
         }
 
@@ -60,9 +61,10 @@ namespace MauiSensorFeeds.BaseModels
         protected void LoadFromCSVFile()
         {
             TestValues.Clear();
-            if (File.Exists(DataFileName))
+            string pathName = GetFullPathname();
+            if (File.Exists(pathName))
             {
-                string testData = File.ReadAllText(DataFileName);
+                string testData = File.ReadAllText(pathName);
                 var sets = testData.Split(DataSpacer, StringSplitOptions.RemoveEmptyEntries).ToList();
                 foreach (var groups in sets)
                 {
@@ -70,16 +72,14 @@ namespace MauiSensorFeeds.BaseModels
                     rows.RemoveAt(0);  // header line
                     foreach (var row in rows)
                     {
-                        var lines = testData.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                        foreach (var line in lines)
+                        foreach (var line in rows)
                         {
                             if (line.IndexOf(',') > 0)
                             {
-                                var tickNo = line.Substring(0, line.IndexOf(','));
-                                long.TryParse(tickNo, out long tick);
-                                var dataPart = line.Substring(line.IndexOf(',') + 1);
-                                T value = ParseValueFromCSV(dataPart);
-                                TestValues.Add(tick, value);
+                                long tick = 0;
+                                T? value = ParseValueFromCSV(line, out tick);
+                                if (value != null)
+                                    TestValues[tick] = value;
                             }
                         }
                     }
@@ -87,14 +87,15 @@ namespace MauiSensorFeeds.BaseModels
             }
         }
 
-        protected abstract T ParseValueFromCSV(string data);
+        protected abstract T? ParseValueFromCSV(string data, out long ticks);
 
         protected void LoadFromJsonFile()
         {
             TestValues.Clear();
-            if (File.Exists(DataFileName))
+            string pathName = GetFullPathname();
+            if (File.Exists(pathName))
             {
-                string testData = File.ReadAllText(DataFileName);
+                string testData = File.ReadAllText(pathName);
                 List<string> jsonTexts = new List<string>();
                 string jsonStr = "";
                 int FilePosition = 0;
@@ -120,7 +121,7 @@ namespace MauiSensorFeeds.BaseModels
                         }
                         catch (Exception ex)
                         {
-                            ex.Data.Add("SensorData JSON File", DataFileName);
+                            ex.Data.Add("SensorData JSON File", pathName);
                             ex.Data.Add($"testData[{FilePosition}],JsonTexts[{StringPosition}]", jsonStr);
                             throw new Exception($"Parsing of json text failed. error={ex.Message}", ex);
                         }
@@ -129,73 +130,84 @@ namespace MauiSensorFeeds.BaseModels
             }
         }
 
-        protected object GetExternalFilesDir()
+        protected string GetExternalFilesDir()
         {
-            object? docsDirectory = null;
+            object? docsDirectory = MauiSensorFeeds.SensorFeeds.FilePath;
+            /*
 #if ANDROID
-            docsDirectory = Android.App.Application.Context.GetExternalFilesDir(Android.OS.Environment.DirectoryDocuments);
+            docsDirectory = Android.App.Application.Context.GetExternalFilesDir(Android.OS.Environment.DirectoryDownloads);
 #elif IOS
             docsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 #elif WINDOWS
             docsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 #endif
-            return docsDirectory;
+            */
+            return docsDirectory?.ToString() ?? "";
         }
 
-        public void SaveToFile()
+        public string GetFullPathname()
         {
+            //string filepath = Path.Combine(
+            //    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DataFileName);
+            //return filepath;
             var docsDirectory = GetExternalFilesDir();
-            string filePath = docsDirectory?.ToString() + Path.DirectorySeparatorChar + DataFileName;
+            string filename = Path.Combine(docsDirectory.ToString(), DataFileName);
+            Console.WriteLine($"//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////SensorData: GetFullPathname: {filename}");
+            return filename;
+
+        }
+
+        public Stream WriteToStream()
+        {
+            string path = GetFullPathname();
+            string data = "";
             lock (valueListLock)
             {
                 if (this.IsJson)
                 {
-                    SaveJsonToFile(filePath);
+                    data = SaveJsonToString();
                 }
                 else if (this.IsCsv)
                 {
-                    SaveCSVToFile(filePath);
+                    data = SaveCSVToString();
                 }
                 else if (this.DataFileName.Length > 0)
                 {
-                    throw new NotSupportedException($"Only .json and .csv file formats are supported, not {filePath}");
+                    throw new NotSupportedException($"Only .json and .csv file formats are supported, not {this.DataFileName}");
                 }
                 testValues.Clear();
             }
+            return new MemoryStream(data.Select(c => (byte)c).ToArray<byte>());
         }
 
-        protected void SaveCSVToFile(string csvFilename)
+        protected string SaveCSVToString()
         {
-            StringBuilder SB = new StringBuilder(DataSpacer + CSVHeaderLine());
+            StringBuilder SB = new StringBuilder(DataSpacer);
+            SB.AppendLine(CSVHeaderLine());
             foreach (var kvp in testValues)
             {
-                SB.AppendLine($"{kvp.Key},{ConvertValueToCSV(kvp.Value)}");
+                SB.AppendLine(ConvertValueToCSV(kvp.Value, kvp.Key));
             }
-            File.AppendAllText(csvFilename, SB.ToString());
+            return SB.ToString();
         }
 
-        protected void SaveJsonToFile(string jsonFilename)
+        protected string SaveJsonToString()
         {
             var data = JsonSerializer.Serialize<SortedList<long, T>>(testValues);
             data = DataSpacer + data;
-            File.AppendAllText(jsonFilename, data);
+            return data;
         }
 
-        protected abstract string ConvertValueToCSV(T value);
-        
+        protected abstract string ConvertValueToCSV(T value, long ticks = 0);
+
         protected abstract string CSVHeaderLine();
 
         public void LoadTestValues(SortedList<long, T> values)
         {
-            lock(valueListLock)
+            lock (valueListLock)
             {
                 testValues = values;
             }
-        }
-
-        public void Flush()
-        {
-            SaveToFile();
         }
 
         public List<T> ValuesLastNo(int maxBufferSize)
@@ -226,5 +238,6 @@ namespace MauiSensorFeeds.BaseModels
                 return list;
             }
         }
+
     }
 }

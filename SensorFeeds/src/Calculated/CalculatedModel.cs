@@ -13,67 +13,71 @@ namespace MauiSensorFeeds.Calculated
     {
         public static CalculatedModel GetModel()
         {
-            if (model == null)
-                model = new CalculatedModel(SensorFeeds.GetSensorFeeds());
-            return model;
+            return defaultModel ?? new CalculatedModel();
         }
+
+        private static CalculatedModel? defaultModel;
 
         #region sensors
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-nullable value exiting ctor.
 #pragma warning disable CS8603 // Possible null reference return.
-        private static CalculatedModel model;
         protected SensorFeeds Feeds => SensorFeeds.GetSensorFeeds();
-        protected IGeolocation GeolocationSource => Feeds.GeolocationSource;
-        protected IOrientationSensor OrientationSensorSource => Feeds.OrientationSensorSource;
-        protected IAccelerometer AccelerometerSource => Feeds.AccelerometerSource;
-        protected ICompass CompassSource => Feeds.CompassSource;
+        protected BaseSensor<Location> GeolocationSource => Feeds.GeolocationSource;
+        protected BaseSensor<Quaternion> OrientationSensorSource => Feeds.OrientationSensorSource;
+        protected BaseSensor<Vector3> AccelerometerSource => Feeds.AccelerometerSource;
+        protected BaseSensor<double> CompassSource => Feeds.CompassSource;
 #pragma warning restore CS8603 // Possible null reference return.
 #pragma warning restore CS8618 // Non-nullable field must contain a non-nullable value exiting ctor.
 
         #endregion
 
-        private CalculatedModel(SensorFeeds sensorFeeds)
+        private CalculatedModel()
         {
-            CalculatedModel.model = this;
+            if (defaultModel == null)
+                defaultModel = this;
+        }
+        
+        public CalculatedModel GetModelCopy()
+        {
+            var model = new CalculatedModel();
+            CopyValuesTo(model);
+            return model;
+        }
+
+        public void CopyValuesTo(CalculatedModel newModel)
+        {
+            if (newModel != this)
+            {
+                newModel.orientation = this.Orientation;
+                newModel.acceleration = this.Acceleration;
+                newModel.location = this.Location;
+                newModel.headingFromNorth = this.headingFromNorth;
+                newModel.Recalculate();
+            }
         }
 
         public virtual void Recalculate()
         {
             CalculateMeasures();
-            CalculatedValuesChanged?.Invoke(null, new CalculatedModelChangedEventArgs(this));
+            this.CopyValuesTo(CalculatedModel.GetModel());
         }
 
-        #region Event handlers
-        public event EventHandler<CalculatedModelChangedEventArgs> ? CalculatedValuesChanged;
+        #region private 
 
-        internal void Accelerometer_ReadingChanged(object? sender, AccelerometerChangedEventArgs e)
-        {
-            if (e.Reading.Acceleration.Length() != 0)
-                acceleration = e.Reading.Acceleration;
-            Recalculate();
-        }
-        internal void GeolocationSource_LocationChanged(object? sender, GeolocationLocationChangedEventArgs e)
-        {
-            if (e.Location.Latitude + e.Location.Longitude != 0)
-                location = e.Location;
-            Recalculate();
-        }
-        internal void OrientationSensorSource_ReadingChanged(object? sender, OrientationSensorChangedEventArgs e)
-        {
-            if (e.Reading.Orientation.Length() != 0)
-                orientation = e.Reading.Orientation;
-            Recalculate();
-        }
-        internal void Compass_ReadingChanged(object? sender, CompassChangedEventArgs e)
-        {
-            if (e.Reading.HeadingMagneticNorth != double.NaN)
-                headingFromNorth = (float) e.Reading.HeadingMagneticNorth;
-            Recalculate();
-        }
+        private Quaternion orientation = new Quaternion();
+        private Vector3 acceleration = new Vector3();
+        private Location location = new Location();
+        internal float headingFromNorth = float.NaN;
+        private Quaternion absoluteAcceleration;
+        private float roll;
+        private float pitch;
+        private float yaw;
+
         #endregion
 
         #region constants and labels
+
         public static DistanceUnits UnitsOfDistance { get; set; }
 
         public static double Rads2degs => 180 / Math.PI;
@@ -87,22 +91,62 @@ namespace MauiSensorFeeds.Calculated
         }
 
         public static float AccelBrakeLimit => (float) Grav2DistancePHPS() / 3;
+
+        public string AccelLabel => (UnitsOfDistance == DistanceUnits.Miles ? "mph /sec" : "kph /sec");
+
+        public string SpeedLabel => (UnitsOfDistance == DistanceUnits.Miles ? "mph" : "kph");
+
         #endregion
 
         #region measures
 
-        private Quaternion orientation = new Quaternion();
-        private Vector3 acceleration = new Vector3();
-        private Location location = new Location();
-        private float headingFromNorth = float.NaN;
+        public Quaternion Orientation 
+        { 
+            get => orientation; 
+            set 
+            { 
+                if (orientation != value) 
+                { 
+                    orientation = value; 
+                    Recalculate(); 
+                } 
+            } 
+        }
 
-        public Quaternion Orientation => orientation;
+        public Vector3 Acceleration
+        { 
+            get => acceleration; 
+            set 
+            { 
+                if (acceleration != value) 
+                {
+                    acceleration = value; 
+                    Recalculate();
+                }
+            } 
+        }
 
-        public Vector3 Acceleration => acceleration;
+        public Location Location
+        {
+            get => location;
+            set
+            {
+                if (location != value && value != null)
+                {
 
-        public Location Location => location;
+                    location = value; 
+                    Recalculate();
+                }
+            }
+        }
 
         public float HeadingFromNorth => headingFromNorth;
+
+        public long TicksIndex { get; set; }
+
+        #endregion
+
+        #region Primary Calculated values
 
         /// <summary>
         /// Gets the horizontal total acceleration (or decelleration) in G's by removing the gravity component.
@@ -116,57 +160,24 @@ namespace MauiSensorFeeds.Calculated
                 return lsq > 1 ? Math.Sqrt(lsq - 1) : 0;
             }
         }
-
-        /*
-        /// <summary>
-        /// Estimate the acceleration rate from loc2 to loc3 versus from loc1 to loc2
-        /// </summary>
-        public double AccelRate
-        {
-            get
-            {
-                double lastAccelRate = 0;
-                lock (samplesLock)
-                {
-                        Location lastLoc1;
-                        Location lastLoc2;
-                        Location lastLoc3;
-                        long ticksInterval1;
-                        long ticksInterval2;
-                        double distance1;
-                        double distance2;
-                        lastLoc1 = sensorReadings.Values[BufferCount - 1];
-                        lastLoc2 = sensorReadings.Values[BufferCount - 2];
-                        lastLoc3 = sensorReadings.Values[BufferCount - 3];
-                        ticksInterval1 = lastLoc1.Timestamp.Ticks - lastLoc2.Timestamp.Ticks;
-                        ticksInterval2 = lastLoc2.Timestamp.Ticks - lastLoc3.Timestamp.Ticks;
-                        distance1 = lastLoc1.CalculateDistance(lastLoc2, DistanceUnits.Miles);
-                        distance2 = lastLoc2.CalculateDistance(lastLoc3, DistanceUnits.Miles);
-                        var speed1 = distance1 / (ticksInterval1 * 10000 * 3600);  // mph
-                        var speed2 = distance2 / (ticksInterval2 * 10000 * 3600); // mph
-                        var avgTime = (lastLoc1.Timestamp.Ticks - lastLoc2.Timestamp.Ticks) * 10000 / 2; // secs
-                        lastAccelRate = (speed2 - speed1) / avgTime; // mph per second
-                }
-                return lastAccelRate;
-            }
-        }
-        */
         public double AngleOfTravel => Location.Course.GetValueOrDefault(double.NaN);
         public double Speed => Location.Speed ?? 0;
-
-        private Quaternion absoluteAcceleration;
-        private float roll;
-        private float pitch;
-        private float yaw;
-        public double AccelFromLocations { get; private set; }
-        public Quaternion AbsoluteAcceleration { get { return absoluteAcceleration; } }
+        public Quaternion AbsoluteAcceleration 
+        { 
+            get { return absoluteAcceleration; } 
+            set { absoluteAcceleration = value; }
+        }
         public double HorizAccel => Math.Sqrt(
                     (absoluteAcceleration.X * absoluteAcceleration.X) +
                     (absoluteAcceleration.Y * absoluteAcceleration.Y));
+
+        #endregion
+
+        #region calculated display values
+
         public float Acceleration_X => (float)Math.Round((decimal)(Acceleration.X * Grav2DistancePHPS()), 3);
         public float Acceleration_Y => (float)Math.Round((decimal)(Acceleration.Y * Grav2DistancePHPS()), 3);
         public float Acceleration_Z => (float)Math.Round((decimal)(Acceleration.Z * Grav2DistancePHPS()), 3);
-
         public float Orientation_Roll => (float)Math.Round(roll * Rads2degs, 3);
         public float Orientation_Pitch => (float)Math.Round(pitch * Rads2degs, 3);
         public float Orientation_Yaw => (float)Math.Round(yaw * Rads2degs, 3);
@@ -174,15 +185,13 @@ namespace MauiSensorFeeds.Calculated
         public float Orientation_Y => (float)Math.Round(Orientation.Y, 3);
         public float Orientation_Z => (float)Math.Round(Orientation.Z, 3);
         public float Orientation_W => (float)Math.Round(Orientation.W, 3);
-
         public float AbsAcceleration_X => (float)Math.Round(AbsoluteAcceleration.X * Grav2DistancePHPS(), 3);
         public float AbsAcceleration_Y => (float)Math.Round(AbsoluteAcceleration.Y * Grav2DistancePHPS(), 3);
         public float AbsAcceleration_Z => (float)Math.Round(AbsoluteAcceleration.Z * Grav2DistancePHPS(), 3);
 
-        public string AccelLabel => (UnitsOfDistance == DistanceUnits.Miles ? "mph /sec" : "kph /sec");
-        public string SpeedLabel => (UnitsOfDistance == DistanceUnits.Miles ? "mph" : "kph");
-
         #endregion
+
+        #region Calculate methods
 
         protected virtual void CalculateYawPitchRoll()
         {
@@ -304,5 +313,42 @@ namespace MauiSensorFeeds.Calculated
             // If both are 0, no measurement (NaN).
 
         }
+
+        /*
+        /// <summary>
+        /// Estimate the acceleration rate from loc2 to loc3 versus from loc1 to loc2
+        /// </summary>
+        public double AccelRate
+        {
+            get
+            {
+                double lastAccelRate = 0;
+                lock (samplesLock)
+                {
+                        Location lastLoc1;
+                        Location lastLoc2;
+                        Location lastLoc3;
+                        long ticksInterval1;
+                        long ticksInterval2;
+                        double distance1;
+                        double distance2;
+                        lastLoc1 = sensorReadings.Values[BufferCount - 1];
+                        lastLoc2 = sensorReadings.Values[BufferCount - 2];
+                        lastLoc3 = sensorReadings.Values[BufferCount - 3];
+                        ticksInterval1 = lastLoc1.Timestamp.Ticks - lastLoc2.Timestamp.Ticks;
+                        ticksInterval2 = lastLoc2.Timestamp.Ticks - lastLoc3.Timestamp.Ticks;
+                        distance1 = lastLoc1.CalculateDistance(lastLoc2, DistanceUnits.Miles);
+                        distance2 = lastLoc2.CalculateDistance(lastLoc3, DistanceUnits.Miles);
+                        var speed1 = distance1 / (ticksInterval1 * 10000 * 3600);  // mph
+                        var speed2 = distance2 / (ticksInterval2 * 10000 * 3600); // mph
+                        var avgTime = (lastLoc1.Timestamp.Ticks - lastLoc2.Timestamp.Ticks) * 10000 / 2; // secs
+                        lastAccelRate = (speed2 - speed1) / avgTime; // mph per second
+                }
+                return lastAccelRate;
+            }
+        }
+        */
+
+        #endregion
     }
 }
