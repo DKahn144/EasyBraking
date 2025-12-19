@@ -83,7 +83,7 @@ namespace MauiSensorFeeds.Feeds
             return 0D;
         }
 
-        protected override float ValueOf(double value)
+        internal override float ValueOf(double value)
         {
             return (float)(value != double.NaN ? value : 0);
         }

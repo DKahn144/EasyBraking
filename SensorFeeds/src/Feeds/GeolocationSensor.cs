@@ -123,7 +123,7 @@ namespace MauiSensorFeeds.Feeds
             return new Location();
         }
 
-        protected override float ValueOf(Location? value)
+        internal override float ValueOf(Location? value)
         {
             return (float) (value?.Latitude + value?.Longitude ?? 0);
         }

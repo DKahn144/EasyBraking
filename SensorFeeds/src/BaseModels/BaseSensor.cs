@@ -67,7 +67,7 @@ namespace MauiSensorFeeds.BaseModels
         /// <returns>A new instance of type T.</returns>
         protected abstract T CreateNew();
 
-        protected abstract float ValueOf(T? value);
+        internal abstract float ValueOf(T? value);
 
         public IList<object> RegisteredHandlers { get; } = new List<object>();
 

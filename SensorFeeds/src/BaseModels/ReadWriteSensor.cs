@@ -185,13 +185,16 @@ namespace MauiSensorFeeds.BaseModels
             // Override to process messages from native sensor. Call base method.
             LastInputReadingTime = DateTime.UtcNow;
             LogInputValue(value);
-            var result = CustomHandler(value);
-            if (result != null && ValueOf(result) != 0)
+            if (ValueOf(value) != ValueOf(currentValue))
             {
-                currentValue = result!;
-                LogOutputValue(result);
-                LastOutputReadingTime = DateTime.UtcNow;
-                NotifyReadingChange(result);
+                var result = CustomHandler(value);
+                if (result != null && ValueOf(result) != 0)
+                {
+                    currentValue = result!;
+                    LogOutputValue(result);
+                    LastOutputReadingTime = DateTime.UtcNow;
+                    NotifyReadingChange(result);
+                }
             }
         }
 

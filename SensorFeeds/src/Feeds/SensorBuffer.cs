@@ -17,7 +17,7 @@ namespace MauiSensorFeeds.Feeds
 
         #region protected
 
-        protected ReadWriteSensor<T> _sensor;
+        protected ReadWriteSensor<T> sensor;
 
         protected bool LimitBufferBySize =>
             BufferStrategy == BufferingStrategy.AverageOfLast10Readings ||
@@ -68,7 +68,8 @@ namespace MauiSensorFeeds.Feeds
             lastReadingTime = DateTime.UtcNow;
             T? reportValue = default;
             InputBuffer.AddValue(readValue);
-            if (WaitLimitReached())
+            if (sensor.ValueOf(readValue) != sensor.ValueOf(sensor.CurrentValue) &&
+                WaitLimitReached())
             {
                 if (LimitBufferBySize)
                 {
@@ -79,9 +80,10 @@ namespace MauiSensorFeeds.Feeds
                     reportValue = GetAverageFromBufferValueTimes();
                 }
             }
-            if (reportValue != null)
+            if (reportValue != null &&
+                sensor.ValueOf(reportValue) != 0)
             {
-                _sensor.currentValue = reportValue;
+                sensor.currentValue = reportValue;
                 lastNotifyTime = DateTime.UtcNow;
             }
             return reportValue;
@@ -91,7 +93,7 @@ namespace MauiSensorFeeds.Feeds
 
         #region public properties
 
-        public ReadWriteSensor<T> Sensor => _sensor;
+        public ReadWriteSensor<T> Sensor => sensor;
 
         public BufferingStrategy BufferStrategy { get; set; }
 
@@ -135,9 +137,9 @@ namespace MauiSensorFeeds.Feeds
         /// </summary>
         /// <param name="sensor">Sensor object using this buffer</param>
         /// <param name="strategy">Strategy for selecting the last reading</param>
-        public SensorBuffer(ReadWriteSensor<T> sensor, BufferingStrategy strategy)
+        public SensorBuffer(ReadWriteSensor<T> _sensor, BufferingStrategy strategy)
         {
-            _sensor = sensor;
+            sensor = _sensor;
             InputBuffer = sensor.GenericSensorData(string.Empty);
             SetBufferStrategy(strategy);
         }

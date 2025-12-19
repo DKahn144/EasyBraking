@@ -1,9 +1,11 @@
 ﻿using MauiSensorFeeds.BaseModels;
 using MauiSensorFeeds.Calculated;
 using MauiSensorFeeds.Data;
+using MauiSensorFeeds.Feeds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -116,9 +118,12 @@ namespace MauiSensorFeeds.Calculated
             CalculatedValuesChanged?.Invoke(null, args);
         }
 
-        protected override float ValueOf(CalculatedModel? value)
+        internal override float ValueOf(CalculatedModel? value)
         {
-            return (value?.Acceleration.Length() + value?.Orientation.Length()) ?? 0;
+            var orientationSensor = Feeds.OrientationSensor as Orientation_Sensor;
+            return (value?.Acceleration.Length() +
+                orientationSensor!.ValueOf(value?.Orientation ?? Quaternion.Zero))
+                ?? 0;
         }
 
         #endregion

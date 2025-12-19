@@ -112,7 +112,7 @@ namespace MauiSensorFeeds.Feeds
             return new Vector3();
         }
 
-        protected override float ValueOf(Vector3 value)
+        internal override float ValueOf(Vector3 value)
         {
             return value.Length();
         }

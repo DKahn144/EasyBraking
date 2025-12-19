@@ -54,10 +54,10 @@ namespace EasyBraking
             builder.Logging.AddDebug();
 
             // logging
+            /*
             accelerometer.WriteInputDataFile = "accelerometerInputData.csv";
             orientationSensor.WriteInputDataFile = "orientationInputData.csv";
             geolocation.WriteInputDataFile = "locationData.csv";
-            /*
             accelerometer.ReadDataFile = "accelerometerInputData.csv";
             accelerometer.WriteOutputDataFile = "accelerometerOutputData.csv";
             orientationSensor.ReadDataFile = "orientationInputData.csv";

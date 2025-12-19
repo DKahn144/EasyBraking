@@ -90,9 +90,9 @@ namespace MauiSensorFeeds.Feeds
             return new Quaternion();
         }
 
-        protected override float ValueOf(Quaternion value)
+        internal override float ValueOf(Quaternion value)
         {
-            return value.Length();
+            return (value.X + value.Y + value.Z + value.W);
         }
 
         #endregion
