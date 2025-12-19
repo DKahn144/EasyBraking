@@ -103,6 +103,14 @@ namespace MauiSensorFeeds.Calculated
             ReadingChangeEvent(CurrentValue);
         }
 
+        protected override void ReadingChangeEvent(CalculatedModel value)
+        {
+            currentValue = value!;
+            LogOutputValue(value);
+            LastOutputReadingTime = DateTime.UtcNow;
+            NotifyReadingChange(value);
+        }
+
         #endregion
 
         #region protected overrides

@@ -68,8 +68,9 @@ namespace MauiSensorFeeds.Feeds
             lastReadingTime = DateTime.UtcNow;
             T? reportValue = default;
             InputBuffer.AddValue(readValue);
-            if (sensor.ValueOf(readValue) != sensor.ValueOf(sensor.CurrentValue) &&
-                WaitLimitReached())
+            if (sensor.ValueOf(sensor.CurrentValue) == 0 ||
+                (sensor.ValueOf(readValue) != sensor.ValueOf(sensor.CurrentValue) &&
+                WaitLimitReached()))
             {
                 if (LimitBufferBySize)
                 {
