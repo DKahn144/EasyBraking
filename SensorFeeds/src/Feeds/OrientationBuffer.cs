@@ -7,7 +7,7 @@ namespace MauiSensorFeeds.Feeds
 {
     public partial class OrientationBuffer : MauiSensorFeeds.Feeds.Orientation_Sensor, IOrientationSensor
     {
-        private QuaternionBuffer sensorBuffer;
+        private QuaternionBuffer2 sensorBuffer;
 
         /*
           * See https://learn.microsoft.com/en-us/dotnet/maui/platform-integration/device/sensors?view=net-maui-9.0&tabs=android
@@ -15,7 +15,7 @@ namespace MauiSensorFeeds.Feeds
         public OrientationBuffer(BufferingStrategy strategy = BufferingStrategy.AverageOfLast10Milliseconds) :
             base()
         {
-            this.sensorBuffer = new QuaternionBuffer(this, strategy);
+            this.sensorBuffer = new QuaternionBuffer2(this, strategy);
         }
 
         protected override Quaternion CustomHandler(Quaternion value)
