@@ -21,7 +21,7 @@ It should also be not difficult to override this behavior with their own code.
 
 An additional feature is that the project will provide the values for absolute acceleration relative to the earth and the direction of travel.
 
-Because of combines sensor calculations, a data object should be available from the static class which can be
+Because of combined sensor calculations, a data object should be available from the static class which can be
 used in a way similar to the other sensor instances.  It needs a similar interface.
 
 
@@ -41,8 +41,7 @@ Requirements:
 2.  Provide sample consumer code accessing these instances.
 3.  Provide a static class interface from which any of these instances can be retrieved.
 4.  Allow one sensor instance to combine the features in any way desired.
-5.  Consider switches on the static class that allows features to be turned on and off, 
-    even for injected instances.
+5.  Consider switches on the static class that allows features to be turned on and off, even for injected instances.
 
 
 
